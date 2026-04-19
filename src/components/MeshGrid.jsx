@@ -77,9 +77,8 @@ export default function MeshGrid({ data, movements, sqrtP, phase, label, highlig
       </div>
 
       <svg
-        width={gridW}
-        height={gridH}
-        style={{ display: 'block', overflow: 'visible' }}
+        viewBox={`0 0 ${gridW} ${gridH}`}
+        style={{ display: 'block', width: '100%', maxWidth: gridW, height: 'auto', overflow: 'visible' }}
       >
         {/* Grid cells */}
         {data.map((val, idx) => {
