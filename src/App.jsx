@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import ControlPanel from './components/ControlPanel';
 import MeshGrid from './components/MeshGrid';
 import ComplexityPanel from './components/ComplexityPanel';
@@ -8,21 +8,20 @@ import {
 } from './utils/shiftLogic';
 import './App.css';
 
-const ANIM_DURATION = 1200; // ms per stage
+const ANIM_DURATION = 1200;
 
 export default function App() {
   const [p, setP] = useState(16);
   const [q, setQ] = useState(5);
 
-  // Simulation states
   const [initial, setInitial] = useState(() => buildInitialState(16));
   const [afterRow, setAfterRow] = useState(null);
   const [afterCol, setAfterCol] = useState(null);
-  const [phase, setPhase] = useState('idle'); // idle | row | col | done
+  const [phase, setPhase] = useState('idle');
   const [movements, setMovements] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [verified, setVerified] = useState(null);
-  const [activeView, setActiveView] = useState('before'); // for mobile tab
+  const [activeView, setActiveView] = useState('before');
 
   const animTimer = useRef(null);
 
@@ -39,10 +38,10 @@ export default function App() {
     clearTimers();
     const pv = runP || p;
     const qv = runQ || q;
+
     const params = computeShiftParams(pv, qv);
     const init = buildInitialState(pv);
 
-    // Reset state
     setInitial(init);
     setAfterRow(null);
     setAfterCol(null);
@@ -51,10 +50,9 @@ export default function App() {
     setPhase('idle');
     setMovements([]);
 
-    // Small initial pause
     animTimer.current = setTimeout(() => {
-      // Stage 1: row shift
       setPhase('row');
+
       const rowMoves = computeMovements(pv, params.sqrtP, params.rowShift, 'row');
       setMovements(rowMoves);
 
@@ -63,10 +61,9 @@ export default function App() {
         setAfterRow(ar);
         setMovements([]);
 
-        // Pause between stages
         animTimer.current = setTimeout(() => {
-          // Stage 2: col shift
           setPhase('col');
+
           const colMoves = computeMovements(pv, params.sqrtP, params.colShift, 'col');
           setMovements(colMoves);
 
@@ -75,15 +72,18 @@ export default function App() {
             setAfterCol(ac);
             setMovements([]);
 
-            // Verify
             const ok = verifyShift(init, ac, pv, qv);
             setVerified(ok);
             setPhase('done');
             setIsAnimating(false);
           }, ANIM_DURATION);
+
         }, 400);
+
       }, ANIM_DURATION);
+
     }, 200);
+
   }, [p, q]);
 
   const handleReset = useCallback(() => {
@@ -97,22 +97,16 @@ export default function App() {
     setInitial(buildInitialState(p));
   }, [p]);
 
-  useEffect(() => () => clearTimers(), []);
-
   const params = computeShiftParams(p, q);
-  const displayGrid = phase === 'done' ? afterCol :
-    phase === 'col' ? afterRow :
-    phase === 'row' ? initial :
-    initial;
 
-  const stateLabel = phase === 'idle' ? 'Before' :
+  const stateLabel =
+    phase === 'idle' ? 'Before' :
     phase === 'row' ? 'Stage 1: Row Shift' :
     phase === 'col' ? 'Stage 2: Col Shift' :
     'After (Final)';
 
   return (
     <div className="app">
-      {/* Header */}
       <header className="app-header">
         <div className="header-inner">
           <div className="header-logo">
@@ -122,10 +116,12 @@ export default function App() {
               <span className="logo-sub">Circular Shift Visualizer</span>
             </div>
           </div>
+
           <div className="header-info">
             <span className="info-chip">p = {p}</span>
             <span className="info-chip">q = {q}</span>
             <span className="info-chip">√p = {params.sqrtP}</span>
+
             {verified !== null && (
               <span className={`verify-chip ${verified ? 'ok' : 'fail'}`}>
                 {verified ? '✓ CORRECT' : '✗ INCORRECT'}
@@ -135,12 +131,11 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main layout */}
       <main className="app-main">
-        {/* Left: Controls */}
         <aside className="sidebar-left">
           <ControlPanel
-            p={p} q={q}
+            p={p}
+            q={q}
             onParamsChange={handleParamsChange}
             onRun={handleRun}
             onReset={handleReset}
@@ -149,8 +144,8 @@ export default function App() {
           />
         </aside>
 
-        {/* Centre: Mesh grids */}
         <section className="grids-area">
+
           <div className="grids-title">
             <span className="grids-title-text">Mesh Visualization</span>
             <span className="grids-subtitle">
@@ -158,102 +153,65 @@ export default function App() {
             </span>
           </div>
 
-          {/* Before / After / Intermediate row */}
           <div className="grids-row">
-            {/* Before */}
-            <div className={`grid-panel ${phase === 'idle' ? 'grid-active' : ''}`}>
+
+            <div className="grid-panel">
               <div className="grid-panel-label">Before</div>
               <MeshGrid
                 data={initial}
                 movements={phase === 'row' ? movements : []}
                 sqrtP={params.sqrtP}
                 phase={phase === 'row' ? 'row' : 'idle'}
-                label="Before"
-                highlight={null}
               />
             </div>
 
-            {/* Arrows between panels */}
-            <div className="panel-connector">
-              <div className={`connector-line ${phase === 'row' || phase === 'col' || phase === 'done' ? 'active' : ''}`} />
-              <div className="connector-label">Stage 1<br />Row±{params.rowShift}</div>
-            </div>
-
-            {/* After Stage 1 */}
-            <div className={`grid-panel ${phase === 'col' || phase === 'done' ? 'grid-active' : ''}`}>
+            <div className="grid-panel">
               <div className="grid-panel-label">After Stage 1</div>
               <MeshGrid
                 data={afterRow || initial}
                 movements={phase === 'col' ? movements : []}
                 sqrtP={params.sqrtP}
-                phase={phase === 'col' ? 'col' : (afterRow ? 'row' : 'idle')}
-                label="After Row Shift"
-                highlight={null}
+                phase={phase === 'col' ? 'col' : 'idle'}
               />
-              {!afterRow && (
-                <div className="grid-placeholder">Run simulation to see Stage 1 result</div>
-              )}
             </div>
 
-            {/* Arrows between panels */}
-            <div className="panel-connector">
-              <div className={`connector-line ${phase === 'col' || phase === 'done' ? 'active' : ''}`} />
-              <div className="connector-label">Stage 2<br />Col±{params.colShift}</div>
-            </div>
-
-            {/* Final */}
-            <div className={`grid-panel ${phase === 'done' ? 'grid-active' : ''}`}>
+            <div className="grid-panel">
               <div className="grid-panel-label">Final State</div>
               <MeshGrid
                 data={afterCol || initial}
                 movements={[]}
                 sqrtP={params.sqrtP}
                 phase={phase === 'done' ? 'done' : 'idle'}
-                label="Final State"
-                highlight={null}
               />
-              {!afterCol && (
-                <div className="grid-placeholder">Run simulation to see final state</div>
-              )}
+            </div>
+
+          </div>
+
+          <div className="step-summary">
+            <div className="ss-item">
+              <span className="ss-label">Phase</span>
+              <span className="ss-value">{stateLabel}</span>
+            </div>
+            <div className="ss-item">
+              <span className="ss-label">Row Shift</span>
+              <span className="ss-value">{params.rowShift}</span>
+            </div>
+            <div className="ss-item">
+              <span className="ss-label">Col Shift</span>
+              <span className="ss-value">{params.colShift}</span>
             </div>
           </div>
 
-          {/* Step summary */}
-          <div className="step-summary">
-            <div className="ss-row">
-              <div className="ss-item">
-                <span className="ss-label">Current Phase</span>
-                <span className="ss-value highlight">{stateLabel}</span>
-              </div>
-              <div className="ss-item">
-                <span className="ss-label">Row Shift Amount</span>
-                <span className="ss-value blue">{params.rowShift} positions →</span>
-              </div>
-              <div className="ss-item">
-                <span className="ss-label">Col Shift Amount</span>
-                <span className="ss-value purple">{params.colShift} positions ↓</span>
-              </div>
-              <div className="ss-item">
-                <span className="ss-label">Total Mesh Steps</span>
-                <span className="ss-value teal">{params.meshSteps}</span>
-              </div>
-            </div>
-          </div>
         </section>
 
-        {/* Right: Complexity */}
         <aside className="sidebar-right">
           <ComplexityPanel p={p} q={q} />
         </aside>
+
       </main>
 
-      {/* Footer */}
       <footer className="app-footer">
-        <span>Mesh Circular Shift Visualizer</span>
-        <span>·</span>
-        <span>2-Stage Algorithm: Row + Column Shift</span>
-        <span>·</span>
-        <a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
+        Mesh Circular Shift Visualizer · React Project
       </footer>
     </div>
   );
