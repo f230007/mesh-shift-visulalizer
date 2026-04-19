@@ -21,7 +21,7 @@ export default function App() {
   const [movements, setMovements] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [verified, setVerified] = useState(null);
-  const [activeView, setActiveView] = useState('before');
+  //const [activeView, setActiveView] = useState('before');
 
   const animTimer = useRef(null);
 

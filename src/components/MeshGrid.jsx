@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 
 function Arrow({ from, to, sqrtP, cellSize, gap, phase }) {
   const pad = 16;
