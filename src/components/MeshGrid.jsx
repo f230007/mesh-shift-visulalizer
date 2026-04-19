@@ -6,7 +6,7 @@ import {
   buildInitialState, applyRowShift, applyColShift,
   computeShiftParams, computeMovements, verifyShift,
 } from './utils/shiftLogic';
-import './App.css';
+import '../App.css';
 
 const ANIM_DURATION = 1200; // ms per stage
 
