@@ -1,14 +1,8 @@
 import React, { useMemo } from 'react';
-import { computeShiftParams, generateComplexityData } from '../utils/shiftLogic.js';
+import { computeShiftParams } from '../utils/shiftLogic.js';
 
 export default function ComplexityPanel({ p, q }) {
   const params = useMemo(() => computeShiftParams(p, q), [p, q]);
-  const chartData = useMemo(
-    () => generateComplexityData(p, Math.round(Math.sqrt(p))),
-    [p]
-  );
-
-  const saving = params.ringSteps - params.meshSteps;
 
   return (
     <div className="complexity-panel">
@@ -17,7 +11,6 @@ export default function ComplexityPanel({ p, q }) {
         <h2>Complexity Analysis</h2>
       </div>
 
-      {/* Metrics only (safe part kept) */}
       <div className="metrics-grid">
         <div className="metric-card blue">
           <div className="metric-value">{params.rowShift}</div>
