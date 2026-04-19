@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import ControlPanel from './components/ControlPanel';
-import MeshGrid from './components/MeshGrid';
-import ComplexityPanel from './components/ComplexityPanel';
+import ControlPanel from './components/ControlPanel.jsx';
+import MeshGrid from './components/MeshGrid.jsx';
+import ComplexityPanel from './components/ComplexityPanel.jsx';
 import {
   buildInitialState, applyRowShift, applyColShift,
   computeShiftParams, computeMovements, verifyShift,
