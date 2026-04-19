@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { computeShiftParams, generateComplexityData } from '../utils/shiftLogic';
+import { computeShiftParams, generateComplexityData } from '../utils/shiftLogic.js';
 
 function MiniBarChart({ data, currentQ, maxSteps }) {
   const chartH = 80;

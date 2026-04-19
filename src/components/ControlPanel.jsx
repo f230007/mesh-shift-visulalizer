@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { validateInputs } from '../utils/shiftLogic';
+import { validateInputs } from '../utils/shiftLogic.js';
 
 const PERFECT_SQUARES = [4, 9, 16, 25, 36, 49, 64];
 

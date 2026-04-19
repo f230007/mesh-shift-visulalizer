@@ -5,7 +5,7 @@ import ComplexityPanel from './components/ComplexityPanel.jsx';
 import {
   buildInitialState, applyRowShift, applyColShift,
   computeShiftParams, computeMovements, verifyShift,
-} from './utils/shiftLogic';
+} from './utils/shiftLogic.js';
 import './App.css';
 
 const ANIM_DURATION = 1200;
