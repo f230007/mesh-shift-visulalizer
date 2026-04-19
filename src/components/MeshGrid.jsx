@@ -1,114 +1,160 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import ControlPanel from './components/ControlPanel.jsx';
-import MeshGrid from './components/MeshGrid.jsx';
-import ComplexityPanel from './components/ComplexityPanel.jsx';
-import {
-  buildInitialState, applyRowShift, applyColShift,
-  computeShiftParams, computeMovements, verifyShift,
-} from './utils/shiftLogic.js';
-import '../App.css';
+import React, { useEffect, useRef } from 'react';
 
-const ANIM_DURATION = 1200; // ms per stage
+function Arrow({ from, to, sqrtP, cellSize, gap, phase }) {
+  const pad = 16;
+  const cs = cellSize + gap;
 
-export default function App() {
-  const [p, setP] = useState(16);
-  const [q, setQ] = useState(5);
+  const fromCol = from % sqrtP;
+  const fromRow = Math.floor(from / sqrtP);
+  const toCol = to % sqrtP;
+  const toRow = Math.floor(to / sqrtP);
 
-  const [initial, setInitial] = useState(() => buildInitialState(16));
-  const [afterRow, setAfterRow] = useState(null);
-  const [afterCol, setAfterCol] = useState(null);
-  const [phase, setPhase] = useState('idle');
-  const [movements, setMovements] = useState([]);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [verified, setVerified] = useState(null);
-  const [activeView, setActiveView] = useState('before');
+  const fx = fromCol * cs + cellSize / 2 + pad;
+  const fy = fromRow * cs + cellSize / 2 + pad;
+  const tx = toCol * cs + cellSize / 2 + pad;
+  const ty = toRow * cs + cellSize / 2 + pad;
 
-  const animTimer = useRef(null);
+  // Offset arrows slightly so they don't all overlap at cell centre
+  const dx = tx - fx;
+  const dy = ty - fy;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const offset = cellSize * 0.28;
+  const startX = fx + (dx / len) * offset;
+  const startY = fy + (dy / len) * offset;
+  const endX = tx - (dx / len) * offset;
+  const endY = ty - (dy / len) * offset;
 
-  const clearTimers = () => {
-    if (animTimer.current) clearTimeout(animTimer.current);
-  };
-
-  const handleParamsChange = useCallback((newP, newQ) => {
-    setP(newP);
-    setQ(newQ);
-  }, []);
-
-  const handleRun = useCallback((runP, runQ) => {
-    clearTimers();
-    const pv = runP || p;
-    const qv = runQ || q;
-    const params = computeShiftParams(pv, qv);
-    const init = buildInitialState(pv);
-
-    setInitial(init);
-    setAfterRow(null);
-    setAfterCol(null);
-    setVerified(null);
-    setIsAnimating(true);
-    setPhase('idle');
-    setMovements([]);
-
-    animTimer.current = setTimeout(() => {
-      setPhase('row');
-      const rowMoves = computeMovements(pv, params.sqrtP, params.rowShift, 'row');
-      setMovements(rowMoves);
-
-      animTimer.current = setTimeout(() => {
-        const ar = applyRowShift(init, params.sqrtP, params.rowShift);
-        setAfterRow(ar);
-        setMovements([]);
-
-        animTimer.current = setTimeout(() => {
-          setPhase('col');
-          const colMoves = computeMovements(pv, params.sqrtP, params.colShift, 'col');
-          setMovements(colMoves);
-
-          animTimer.current = setTimeout(() => {
-            const ac = applyColShift(ar, params.sqrtP, params.colShift);
-            setAfterCol(ac);
-            setMovements([]);
-
-            const ok = verifyShift(init, ac, pv, qv);
-            setVerified(ok);
-            setPhase('done');
-            setIsAnimating(false);
-          }, ANIM_DURATION);
-        }, 400);
-      }, ANIM_DURATION);
-    }, 200);
-  }, [p, q]);
-
-  const handleReset = useCallback(() => {
-    clearTimers();
-    setPhase('idle');
-    setMovements([]);
-    setIsAnimating(false);
-    setAfterRow(null);
-    setAfterCol(null);
-    setVerified(null);
-    setInitial(buildInitialState(p));
-  }, [p]);
-
-  useEffect(() => () => clearTimers(), []);
-
-  const params = computeShiftParams(p, q);
-
-  const displayGrid =
-    phase === 'done' ? afterCol :
-    phase === 'col' ? afterRow :
-    phase === 'row' ? initial :
-    initial;
-
-  const stateLabel =
-    phase === 'idle' ? 'Before' :
-    phase === 'row' ? 'Stage 1: Row Shift' :
-    phase === 'col' ? 'Stage 2: Col Shift' :
-    'After (Final)';
+  const color = phase === 'row' ? '#38bdf8' : '#a78bfa';
+  const id = `arrowhead-${phase}-${from}-${to}`;
 
   return (
-    <div className="app">
-      {/* unchanged UI */}
+    <g className="shift-arrow">
+      <defs>
+        <marker id={id} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 z" fill={color} />
+        </marker>
+      </defs>
+      <line
+        x1={startX} y1={startY}
+        x2={endX} y2={endY}
+        stroke={color}
+        strokeWidth="2"
+        markerEnd={`url(#${id})`}
+        strokeDasharray="5,3"
+        opacity="0.85"
+      />
+    </g>
+  );
+}
+
+export default function MeshGrid({ data, movements, sqrtP, phase, label, highlight }) {
+  const p = sqrtP * sqrtP;
+  const maxGridWidth = 480;
+  const gap = sqrtP <= 4 ? 10 : sqrtP <= 6 ? 7 : 5;
+  const cellSize = Math.min(72, Math.floor((maxGridWidth - (sqrtP - 1) * gap) / sqrtP));
+  const gridW = sqrtP * cellSize + (sqrtP - 1) * gap + 32;
+  const gridH = gridW;
+
+  // Colour each cell by its value (hue based on value/p)
+  const getColor = (val, isHighlighted) => {
+    const hue = Math.round((val / p) * 270); // 0=red, 270=blue
+    if (isHighlighted) return `hsl(${hue}, 90%, 68%)`;
+    return `hsl(${hue}, 65%, 52%)`;
+  };
+
+  const phaseLabel = {
+    idle: 'Initial State',
+    row: 'Stage 1: Row Shift in Progress',
+    col: 'Stage 2: Column Shift in Progress',
+    done: 'Final State',
+  };
+
+  return (
+    <div className={`mesh-grid-container ${phase}`}>
+      <div className="mesh-label">
+        <span className="mesh-label-tag">{label}</span>
+        {phase && <span className="mesh-phase-tag">{phaseLabel[phase] || phase}</span>}
+      </div>
+
+      <svg
+        viewBox={`0 0 ${gridW} ${gridH}`}
+        style={{ display: 'block', width: '100%', maxWidth: gridW, height: 'auto', overflow: 'visible' }}
+      >
+        {/* Grid cells */}
+        {data.map((val, idx) => {
+          const col = idx % sqrtP;
+          const row = Math.floor(idx / sqrtP);
+          const x = col * (cellSize + gap) + 16;
+          const y = row * (cellSize + gap) + 16;
+          const isHighlighted = highlight && highlight.has(idx);
+          const isMoving = movements && movements.some(m => m.fromIdx === idx);
+          const color = getColor(val, isHighlighted || isMoving);
+
+          return (
+            <g key={idx} className={`cell ${isMoving ? 'moving' : ''}`}>
+              <rect
+                x={x} y={y}
+                width={cellSize} height={cellSize}
+                rx={sqrtP <= 4 ? 10 : 7}
+                fill={color}
+                stroke={isMoving ? '#fff' : 'rgba(255,255,255,0.15)'}
+                strokeWidth={isMoving ? 2.5 : 1}
+                style={{
+                  filter: isMoving ? 'drop-shadow(0 0 8px rgba(255,255,255,0.5))' : 'none',
+                  transition: 'all 0.3s ease',
+                }}
+              />
+              {/* Node index (small, top-left) */}
+              <text
+                x={x + 5} y={y + 13}
+                fontSize={Math.max(9, cellSize * 0.18)}
+                fill="rgba(255,255,255,0.65)"
+                fontFamily="'JetBrains Mono', monospace"
+              >
+                {idx}
+              </text>
+              {/* Data value (large, centred) */}
+              <text
+                x={x + cellSize / 2} y={y + cellSize / 2 + (cellSize > 50 ? 5 : 3)}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={Math.max(13, cellSize * 0.34)}
+                fontWeight="700"
+                fill="#fff"
+                fontFamily="'JetBrains Mono', monospace"
+              >
+                {val}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Movement arrows */}
+        {movements && movements.map((m, i) => (
+          <Arrow
+            key={i}
+            from={m.fromIdx}
+            to={m.toIdx}
+            sqrtP={sqrtP}
+            cellSize={cellSize}
+            gap={gap}
+            phase={phase === 'row' ? 'row' : 'col'}
+          />
+        ))}
+      </svg>
+
+      {/* Row/Col labels on sides */}
+      <div className="grid-axis-labels" style={{ width: gridW }}>
+        {Array.from({ length: sqrtP }, (_, r) => (
+          <span
+            key={r}
+            className="row-label"
+            style={{ top: r * (cellSize + gap) + 16 + cellSize / 2 - 8 }}
+          >
+            R{r}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
